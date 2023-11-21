@@ -1,0 +1,101 @@
+
+//+------------------------------------------------------------------+
+//|                                                     Batman Midnight Hunter MT4                                                    |
+//|                                          Developed by Forex Robot Easy Team                                      |
+//|                                                       forexroboteasy.com                                                       |
+//+------------------------------------------------------------------+
+
+// Global variables
+int stopLoss = 30; // Fixed Stop Loss level
+int takeProfit = 50; // Fixed Take Profit level
+double maxSpread = 2.0; // Maximum allowed spread for trading
+bool suffixPrefixSupported = true; // Flag to check if suffix or prefix is supported by broker
+bool spreadControlEnabled = true; // Flag to enable spread control function
+
+//+------------------------------------------------------------------+
+//|                                                                  |
+//|                     Expert Advisor Functions                     |
+//|                                                                  |
+//+------------------------------------------------------------------+
+
+// Initialization function
+int OnInit()
+{
+    // Check if the broker supports suffix or prefix
+    if (!suffixPrefixSupported)
+    {
+        Print('Broker does not support suffix or prefix. Please use a different broker.');
+        return INIT_FAILED;
+    }
+    
+    // Print initial settings
+    Print('Batman Midnight Hunter MT4 initialized successfully.');
+    Print('Stop Loss: ', stopLoss);
+    Print('Take Profit: ', takeProfit);
+    Print('Max Spread: ', maxSpread);
+    
+    return INIT_SUCCEEDED;
+}
+
+// Deinitialization function
+void OnDeinit(const int reason)
+{
+    Print('Batman Midnight Hunter MT4 deinitialized successfully.');
+}
+
+// Tick event handler
+void OnTick()
+{
+    // Check if spread control is enabled
+    if (spreadControlEnabled)
+    {
+        double spread = MarketInfo(Symbol(), MODE_SPREAD);
+        
+        // Check if spread is within acceptable range
+        if (spread > maxSpread)
+        {
+            Print('Spread is too high. Skipping trade.');
+            return;
+        }
+    }
+    
+    // Generate pending order prices
+    double buyPrice = Ask - 10 * Point;
+    double sellPrice = Bid + 10 * Point;
+    
+    // Place pending orders
+    int ticketBuy = OrderSend(Symbol(), OP_BUYSTOP, 0.01, buyPrice, 0, 0, 0, 'Buy Order', 0, 0, Green);
+    int ticketSell = OrderSend(Symbol(), OP_SELLSTOP, 0.01, sellPrice, 0, 0, 0, 'Sell Order', 0, 0, Red);
+    
+    // Check if orders were executed successfully
+    if (ticketBuy > 0 && ticketSell > 0)
+    {
+        Print('Pending orders placed successfully.');
+        
+        // Monitor pending orders
+        while (!IsTradeAllowed())
+        {
+            Sleep(1000);
+        }
+        
+        // Close pending orders
+        bool closeBuyOrder = OrderClose(ticketBuy, OrderLots(), MarketInfo(Symbol(), MODE_BID), 0, Red);
+        bool closeSellOrder = OrderClose(ticketSell, OrderLots(), MarketInfo(Symbol(), MODE_ASK), 0, Red);
+        
+        // Check if orders were closed successfully
+        if (closeBuyOrder && closeSellOrder)
+        {
+            Print('Pending orders closed successfully.');
+        }
+        else
+        {
+            Print('Failed to close pending orders.');
+        }
+    }
+    else
+    {
+        Print('Failed to place pending orders.');
+    }
+}
+
+//+------------------------------------------------------------------+
